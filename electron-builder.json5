@@ -7,7 +7,6 @@
 	"directories": {
 		"output": "release"
 	},
-	"artifactName": "chatai-${version}-${platform}-${arch}.${ext}",
 	"publish": [
 		{
 			provider: 'github',
