@@ -103,6 +103,7 @@ export interface IMessage {
 	created: number
 	skip_relation?: boolean
 	is_delete?: boolean
+	split?: boolean
 }
 
 export interface HitPrompt {

@@ -1,14 +1,25 @@
-import { BasePlatform, HitPrompt, IPromptFunction, SelectionHitResult, SearchPrompt } from '../types'
+import {Ref} from 'vue'
+import { BasePlatform, HitPrompt, IPromptFunction, SelectionHitResult, SearchPrompt, IMessage } from '../types';
 
-export default function generate_prompt(state: any, messages: any, platforms: Record<string, BasePlatform>): { prompts: IPromptFunction[], search: SearchPrompt } {
+export default function generate_prompt(state: Record<string, any>, messages: Ref<IMessage[]>, platforms: Record<string, BasePlatform>): { prompts: IPromptFunction[], search: SearchPrompt } {
 	const prompts: IPromptFunction[] = [
 		{
-			id: 'clear', keywords: ['clear', 'cls'], label: '清空消息', remarks: '清空当前对话的所有消息: [/clear]|[/cls]',
-			callback() {
+			id: 'clear', keywords: ['clear', 'cls'], label: '清空消息', remarks: '清空当前对话的所有消息: /cls [提问...]',
+			callback(text: string) {
 				messages.value = []
-				return false
+				return text.trim() ? text.trim() : false
 			}
-		}
+		},
+		{
+			id: 'split', keywords: ['split', 'seg'], label: '分割对话', remarks: '从最后一条消息之前的所有消息都不在关联: /split [提问...]',
+			callback(text: string) {
+				if (messages.value.length > 0) {
+					messages.value[messages.value.length - 1].split = true
+				}
+				return text.trim() ? text.trim() : false
+			}
+		},
+		
 	]
 	
 	//  切换模型
@@ -58,7 +69,7 @@ export default function generate_prompt(state: any, messages: any, platforms: Re
 		}
 	})
 	//  搜索
-	for (const key of ['web', 'google', 'bing', 'baidu', 'dockdockgo']) {
+	/*for (const key of ['web', 'google', 'bing', 'baidu', 'dockdockgo']) {
 		prompts.push({
 			id: key, keywords: [key], label: key, remarks: `使用搜索引擎${ key === 'web' ? '' : key }回答问题: /${ key } 明天的天气怎么样`,
 			callback: (function (fun: string, text: string) {
@@ -67,7 +78,7 @@ export default function generate_prompt(state: any, messages: any, platforms: Re
 				}
 			}).bind(undefined, key)
 		} as IPromptFunction)
-	}
+	}*/
 	//  统一关键词为小写，方便查询
 	for (const item of prompts) {
 		item.keywords = item.keywords.map(x => x.toLowerCase())

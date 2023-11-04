@@ -1,6 +1,6 @@
-const { app, globalShortcut, Menu, Tray, BrowserWindow, ipcMain, screen } = require('electron')
-const { enable, initialize } = require('@electron/remote/main')
-const { join } = require('node:path')
+const fs = require('node:fs')
+const { join, sep } = require('node:path')
+const { app, globalShortcut, Menu, Tray, BrowserWindow, ipcMain, screen, dialog } = require('electron')
 
 process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true'
 app.setAppUserModelId(app.getName())
@@ -14,14 +14,13 @@ process.env.PUBLIC = process.env.VITE_DEV_SERVER_URL ? join(process.env.DIST_ELE
 
 app.on('window-all-closed', () => app.exit(0))
 app.whenReady().then(async () => {
-    initialize()
-    let CurrentPin = false
+    let isAlwaysOnTop = false
     let win = new BrowserWindow({
         show: false, width: 500, height: 600, minWidth: 500, minHeight: 600,
         alwaysOnTop: true, minimizable: false, maximizable: false, movable: true, resizable: true,
         fullscreen: false, transparent: false, skipTaskbar: true, frame: false, hasShadow: true,
         webPreferences: {
-            nodeIntegration: true, contextIsolation: false, webSecurity: false, spellcheck: false
+	        preload: join(__dirname, 'preload.js'), webSecurity: false, spellcheck: false
         }
     })
     function showMainWindow() {
@@ -39,13 +38,16 @@ app.whenReady().then(async () => {
 		    win.setPosition(x, y, false)
 	    }
     }
-    ipcMain.on('onPin', (e, isPin) => {
-        CurrentPin = isPin
-	    win.setAlwaysOnTop(isPin)
+	ipcMain.handle('showMainWindow', async () => {
+		showMainWindow()
+	})
+    ipcMain.handle('setAlwaysOnTop', (e, is) => {
+	    isAlwaysOnTop = is
+	    win.setAlwaysOnTop(isAlwaysOnTop)
     })
-    enable(win.webContents)
+	platformIntegration(win)
 	win.on('blur', () => {
-		if (CurrentPin) return
+		if (isAlwaysOnTop) return
 		win.hide()
 	})
     win.on('show', () => setTimeout(() => win.setOpacity(1), 50))
@@ -93,3 +95,133 @@ app.whenReady().then(async () => {
     })
 })
 
+
+function platformIntegration(win) {
+	
+	ipcMain.handle('os:cwd', async () => process.cwd())
+	
+	ipcMain.handle('os:writeFile', async (e, path, data) => {
+		try {
+			if (!path || !data) return false
+			fs.writeFileSync(path, typeof data === 'string' || Buffer.isBuffer(data) ? data : JSON.stringify(data))
+		} catch {
+			return false
+		}
+	})
+	
+	ipcMain.handle('os:writeJSONFile', async (e, path, data, beautify) => {
+		try {
+			if (!path || !data) return false
+			fs.writeFileSync(path, typeof data === 'string' || Buffer.isBuffer(data) ? data : (beautify ? JSON.stringify(data, null, '\t') : JSON.stringify(data)))
+		} catch {
+			return false
+		}
+	})
+	
+	ipcMain.handle('os:readFile', async (e, path, encoding) => {
+		if (!path || !fs.existsSync(path) || fs.statSync(path).isDirectory()) return ''
+		if (!encoding || typeof encoding !== 'string') encoding = 'utf8'
+		return fs.readFileSync(path, encoding)
+	})
+	
+	ipcMain.handle('os:readJSONFile', async (e, path) => {
+		if (!path || !fs.existsSync(path) || fs.statSync(path).isDirectory()) return ''
+		try {
+			return JSON.parse(fs.readFileSync(path, 'utf8'))
+		} catch {
+			return ''
+		}
+	})
+	
+	ipcMain.handle('os:exists', async (e, path) => {
+		return path && fs.existsSync(path)
+	})
+	
+	ipcMain.handle('os:mkdir', async (e, path) => {
+		if (!path) return false
+		
+		function mkdirp(dirpath) {
+			if (!dirpath) return false
+			try {
+				if (sep === '/') {
+					dirpath = dirpath.replace(/\\/g, '/')
+				} else {
+					dirpath = dirpath.replace(/\//g, '\\')
+				}
+				if (dirpath[0] === '\\' || dirpath[0] === '/') {
+					dirpath = dirpath.slice(1)
+				}
+				dirpath.split(sep).reduce((prev, folder) => {
+					const curr = process.platform === 'win32' && prev === sep ? folder : join(prev, folder)
+					if (!fs.existsSync(curr)) {
+						fs.mkdirSync(curr)
+					}
+					return curr
+				}, sep)
+				return true
+			} catch {
+				return false
+			}
+		}
+		
+		try {
+			if (fs.existsSync(path)) {
+				return true
+			} else {
+				return mkdirp(path)
+			}
+		} catch {
+		
+		}
+		return false
+	})
+	
+	ipcMain.handle('os:deleteFile', async (e, path) => {
+		if (!path) return false
+		try {
+			if (fs.existsSync(path)) {
+				if (fs.statSync(path).isDirectory()) {
+					fs.rmdirSync(path, { recursive: true })
+				} else {
+					fs.unlinkSync(path)
+				}
+				return true
+			}
+		} catch {
+		}
+		return false
+	})
+	
+	ipcMain.handle('os:exit', async () => app.exit(0))
+	
+	ipcMain.handle('os:relaunch', async () => {
+		app.relaunch()
+		app.exit(0)
+	})
+	
+	ipcMain.handle('os:reload', async () => win?.reload())
+	
+	
+	ipcMain.handle('os:showErrorBox', async (e, title, content) => {
+		dialog.showErrorBox(title, content)
+	})
+	
+	ipcMain.handle('os:showMessageBox', async (e, title, content, type, buttons) => {
+		return dialog.showMessageBox({
+			title,
+			message: content,
+			type,
+			buttons,
+		})
+	})
+	
+	ipcMain.handle('os:showOpenDialog', async (e, opts) => {
+		return dialog.showOpenDialog(opts)
+	})
+	
+	ipcMain.handle('os:showSaveDialog', async (e, opts) => {
+		return dialog.showSaveDialog(opts)
+	})
+	
+	
+}

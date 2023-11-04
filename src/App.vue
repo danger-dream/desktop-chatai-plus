@@ -6,20 +6,17 @@ import {
 	IconPlus, IconPinned, IconPinnedOff, IconSend, IconClipboard, IconMoon, IconSun, IconRobotFace, IconUserSquareRounded,
 	IconArrowBarToUp, IconArrowBarToDown, IconReload, IconTrash, IconMessage, IconSettings
 } from '@tabler/icons-vue'
-import fs from 'node:fs'
-import { join } from 'node:path'
-import { ipcRenderer } from 'electron'
-import { app, dialog } from '@electron/remote'
 import Setting from './Setting.vue'
 import generate_prompt from './prompt_functions'
 import { createMd, formatTime, copy, highlightAll } from './utils'
 import Platform from './platform'
 import Popover from '@/components/popover/Popover.vue'
+import Integration from './platformIntegration'
 
 const default_title = 'Desktop ChatAI Plus'
-const config_path = join(process.cwd(), './config.json')
-const conversation_dir = join(process.cwd(), './conversations')
-const conversation_file = join(conversation_dir, './conversations.json')
+let config_path = `config.json`
+let conversation_dir = `conversations`
+let conversation_file = `${conversation_dir}/conversations.json`
 const platformMap: Record<string, BasePlatform> = {}
 
 const md = createMd()
@@ -32,9 +29,9 @@ const messages = ref<IMessage[]>([])
 const selectedConversationRef = ref<InstanceType<typeof Popover> | null>(null)
 
 const state = reactive({
-	pin: false,
+	isAlwaysOnTop: false,
 	is_stteing: false,
-	is_dark: false,
+	is_dark: true,
 	conversations: [] as IConversation[],
 	conversationIndex: -1,
 	is_created: false,
@@ -95,46 +92,57 @@ function inputFocus() {
 
 window.inputFocus = inputFocus
 
-function exit(title: string, content: string) {
+async function saveConfig() {
 	try {
-		dialog.showErrorBox(title, content)
-		app.exit(0)
-	} catch {
-	}
-}
-
-function saveConfig() {
-	try {
-		fs.writeFileSync(config_path, JSON.stringify(state.platform_default_config, undefined, '\t'))
-		reloadConfig()
-		dialog.showMessageBoxSync({ title: '提示', message: '配置保存成功' })
+		await Integration.writeFile(config_path, state.platform_default_config)
+		await reloadConfig()
+		await Integration.showMessageBox('提示', '配置保存成功')
 	} catch {}
 }
 
 function toggleTheme() {
 	state.is_dark = !state.is_dark
-	if (state.is_dark) {
-		document.body.classList.add('dark')
-	} else {
-		document.body.classList.remove('dark')
-	}
+	document.body.classList[state.is_dark ? 'add' : 'remove']('dark')
+	localStorage.setItem('is_dark', state.is_dark + '')
 }
 
-onMounted(() => {
-	toggleTheme()
+async function toggleAlwaysOnTop() {
+	state.isAlwaysOnTop = !state.isAlwaysOnTop
+	await Integration.invokeMainFunction('setAlwaysOnTop', state.isAlwaysOnTop)
+	localStorage.setItem('isAlwaysOnTop', state.isAlwaysOnTop + '')
+}
+
+onMounted(async () => {
+	const cwd = await Integration.cwd()
+	config_path = `${cwd}/config.json`
+	conversation_dir = `${cwd}/conversations`
+	conversation_file = `${conversation_dir}/conversations.json`
 	
-	try {
-		if (fs.existsSync(config_path)) {
-			Object.assign(state.platform_default_config, JSON.parse(fs.readFileSync(config_path, 'utf-8')) as ISystemConfig)
-		}
-	} catch {
-		state.is_stteing = true
+	if (localStorage.getItem('isAlwaysOnTop') === 'true') {
+		state.isAlwaysOnTop = true
+		await Integration.invokeMainFunction('setAlwaysOnTop', true)
+	}
+	if (localStorage.getItem('is_dark') === 'true') {
+		state.is_dark = true
+	}
+	if (state.is_dark) {
+		document.body.classList.add('dark')
+	}
+	if (!localStorage.getItem('__desktop-chatai-plus')) {
+		await Integration.invokeMainFunction('showMainWindow')
+		localStorage.setItem('__desktop-chatai-plus', 'true')
 		return
 	}
-	reloadConfig()
+	try {
+		if (await Integration.exists(config_path)) {
+			Object.assign(state.platform_default_config, await Integration.readJSONFile(config_path) as ISystemConfig)
+		}
+	} catch{
+	}
+	reloadConfig().catch()
 })
 
-function reloadConfig() {
+async function reloadConfig() {
 	state.prompt = ''
 	state.hits = []
 	state.is_stteing = false
@@ -151,8 +159,8 @@ function reloadConfig() {
 		}
 	}
 	if (Object.keys(platformMap).length < 1) {
-		dialog.showMessageBoxSync({ title: '提示', message: '请先进行平台配置' })
 		state.is_stteing = true
+		await Integration.invokeMainFunction('showMainWindow')
 		return
 	}
 	const res = generate_prompt(state, messages, platformMap)
@@ -161,12 +169,10 @@ function reloadConfig() {
 	state.config.platform = state.platform_default_config.platform
 	state.config.model = state.platform_default_config.model
 	state.config.embedding = state.platform_default_config.embedding
-	if (!fs.existsSync(conversation_dir)) {
-		fs.mkdirSync(conversation_dir)
-	}
+	await Integration.mkdir(conversation_dir)
 	try {
-		if (fs.existsSync(conversation_file)) {
-			state.conversations = JSON.parse(fs.readFileSync(conversation_file, 'utf-8'))
+		if (await Integration.exists(conversation_file)) {
+			state.conversations = await Integration.readJSONFile(conversation_file)
 		}
 		if (state.conversations.length > 0) {
 			state.conversationIndex = 0
@@ -176,14 +182,6 @@ function reloadConfig() {
 		}
 	} catch {
 		state.conversations = []
-	}
-}
-
-async function onPin() {
-	state.pin = !state.pin
-	try {
-		ipcRenderer.send('onPin', state.pin)
-	} catch {
 	}
 }
 
@@ -206,7 +204,7 @@ function createConversation() {
 
 function saveConversations() {
 	try {
-		fs.writeFileSync(conversation_file, JSON.stringify(state.conversations))
+		Integration.writeJSONFile(conversation_file, state.conversations)
 	} catch {
 	}
 }
@@ -223,22 +221,24 @@ function toggleConversations(index: number) {
 	})
 }
 
-function deleteConversations(index: number) {
+async function deleteConversations(index: number) {
 	if (index < 0 || index >= state.conversations.length) {
 		return
 	}
-	dialog.showMessageBox({
-		title: '警告', type: 'warning', message: '是否确认删除该对话？删除后将无法恢复，是否继续?', buttons: ['取消', '继续']
-	}).then(({ response }) => {
+	if (!state.isAlwaysOnTop) {
+		await Integration.invokeMainFunction('setAlwaysOnTop', true)
+	}
+	Integration.showMessageBox('警告', '是否确认删除该对话？删除后将无法恢复，是否继续?', 'warning', ['取消', '继续']).then(async ({ response }) => {
+		if (!state.isAlwaysOnTop) {
+			await Integration.invokeMainFunction('setAlwaysOnTop', false)
+		}
 		if (response === 1) {
 			const conversationId = state.conversations[index].id
 			state.conversations.splice(index, 1)
 			saveConversations()
 			selectedConversationRef.value?.hide()
-			const conversation_file = join(conversation_dir, conversationId + '.json')
-			if (fs.existsSync(conversation_file)) {
-				fs.unlinkSync(conversation_file)
-			}
+			const conversation_file = `${conversation_dir}/${conversationId}.json`
+			await Integration.deleteFile(conversation_file)
 			if (index === state.conversationIndex) {
 				if (state.conversationIndex === 0) {
 					state.conversationIndex = -1
@@ -256,8 +256,7 @@ function deleteConversations(index: number) {
 async function reloadMessages() {
 	if (!conversation.value) return
 	try {
-		const chat_id = conversation.value.id
-		messages.value = JSON.parse(fs.readFileSync(join(conversation_dir, chat_id + '.json'), 'utf-8'))
+		messages.value = await Integration.readJSONFile(`${conversation_dir}/${conversation.value.id}.json`)
 		for (const item of messages.value) {
 			//  合并配置
 			if (item.params) {
@@ -362,7 +361,7 @@ async function onChat() {
 	const platform = platformMap[state.config.platform]
 	let total_tokens = platform.count_tokens(prompt)
 	if (total_tokens > max_token) {
-		dialog.showErrorBox('错误', '输入文本长度超出允许的最大值')
+		await Integration.showErrorBox('错误', '输入文本长度超出允许的最大值')
 		inputFocus()
 		return
 	}
@@ -377,6 +376,10 @@ async function onChat() {
 		let n = 0
 		for (let i = messages.value.length - 1; i >= 0; i--) {
 			const message = messages.value[i]
+			//  消息被置为分割时，将退出关联流程
+			if (message.split) {
+				break
+			}
 			// 空消息、回复失败的消息不进行关联
 			if (!message.content || message.is_delete) {
 				continue
@@ -457,8 +460,8 @@ async function onChat() {
 			m.ended = true
 			m.total_tokens = result.total_tokens
 			try {
-				fs.writeFileSync(join(conversation_dir, conversation_id + '.json'), JSON.stringify(messages.value.filter(x => !x.is_delete), undefined, '\t'))
-			} catch {
+				await Integration.writeJSONFile(`${conversation_dir}/${conversation_id}.json`, messages.value.filter(x => !x.is_delete))
+			} catch{
 			}
 			if (cur_conversation) {
 				const r = await platform.completion('请帮我把下面的问答提取为简短的标题，该标题用于在html的200px的div中显示，绝不允许添加任何不相关的内容:\n\n' + prompt + '\n\n' + m.content + '\n\n标题:', {
@@ -545,9 +548,9 @@ function getDifferenceParams(m: IMessage): { k: string, v: string }[] {
 						<icon-moon v-if="state.is_dark" @click="toggleTheme" class="cursor-pointer hover:text-neutral-400" />
 						<icon-sun v-else @click="toggleTheme" class="cursor-pointer hover:text-neutral-400" />
 					</div>
-					<div v-tooltip="state.pin ? '固定窗口' : '未固定窗口'">
-						<icon-pinned v-if="state.pin" @click="onPin" class="cursor-pointer hover:text-neutral-400 ml-2" />
-						<icon-pinned-off v-else @click="onPin" class="cursor-pointer hover:text-neutral-400 ml-2" />
+					<div v-tooltip="state.isAlwaysOnTop ? '固定窗口' : '未固定窗口'">
+						<icon-pinned v-if="state.isAlwaysOnTop" @click="toggleAlwaysOnTop" class="cursor-pointer hover:text-neutral-400 ml-2" />
+						<icon-pinned-off v-else @click="toggleAlwaysOnTop" class="cursor-pointer hover:text-neutral-400 ml-2" />
 					</div>
 					<div v-tooltip="'设置'">
 						<icon-settings @click="state.is_stteing = !state.is_stteing" class="cursor-pointer hover:text-neutral-400 ml-2" />
@@ -583,11 +586,11 @@ function getDifferenceParams(m: IMessage): { k: string, v: string }[] {
 						</h1>
 					</div>
 					<!-- 消息列表 -->
-					<div v-for="(m, index) in messages" :key="index" :class="m.role === 'user' ? 'bg-white dark:bg-[#343541]' : 'bg-[#F7F7F8] dark:bg-[#444654]'"
-						class="group w-full text-gray-800 dark:text-gray-100 border-b border-black/10 dark:border-gray-900/50 relative">
+					<div v-for="(m, index) in messages" :key="index" :class="[m.role === 'user' ? 'bg-white dark:bg-[#343541]' : 'bg-[#F7F7F8] dark:bg-[#444654]', m.split ? 'border-b-2 border-dotted border-gray-300 dark:border-gray-500' : '']"
+						class="group w-full text-gray-800 dark:text-gray-100 relative">
 						<!-- 显示与当前配置有差异的参数 -->
 						<div v-if="getDifferenceParams(m).length > 0" class="text-xs dark:opacity-50 flex items-center justify-between gap-1 p-1 px-3 text-gray-800 dark:text-gray-300 cursor-default">
-							<div v-for="item in getDifferenceParams(m)" :key="item.k" class="p-1 rounded-md hover:bg-gray-500 hover:text-white cursor-pointer" v-tooltip="'点击切换'">
+							<div v-for="item in getDifferenceParams(m)" :key="item.k" class="p-1 rounded-md hover:bg-gray-500 hover:text-white">
 								{{ item.k }}: {{ item.v }}
 							</div>
 						</div>
@@ -599,8 +602,7 @@ function getDifferenceParams(m: IMessage): { k: string, v: string }[] {
 							</div>
 							<!-- 内容 -->
 							<div class="w-[calc(100%-30px)] dark:opacity-70 min-h-[20px] flex flex-col items-start break-words">
-								<template v-if="m.role === 'user'">{{ m.content }}</template>
-								<div v-else v-html="md.render(m.content)" class="markdown prose w-full break-words dark:prose-invert"></div>
+								<div v-html="md.render(m.content)" class="markdown prose w-full break-words dark:prose-invert"></div>
 							</div>
 						</div>
 						<!-- 复制按钮 -->
@@ -639,10 +641,7 @@ function getDifferenceParams(m: IMessage): { k: string, v: string }[] {
 								:style="{ bottom: state.height + 'px', overflow: state.height > 176 ? 'auto' : 'hidden' }"
 								placeholder="请输入您的问题，使用[Ctrl / Alt] + Enter快速提问"
 								v-model="state.prompt" @input="autoResize"
-								@keyup.shift.enter.stop.prevent="onChat"
-								@keyup.ctrl.enter.stop.prevent="onChat"
-								@keyup.alt.enter.stop.prevent="onChat"
-								@keyup.meta.enter.stop.prevent="onChat"
+								@keydown.enter.stop.prevent="onChat"
 								:disabled="state.is_wait_answer" :rows="1">
 							</textarea>
 							<button @click="onChat" class="absolute focus:outline-none text-neutral-800 hover:text-neutral-900 dark:text-neutral-100 dark:hover:text-neutral-200 dark:bg-opacity-50 hover:bg-neutral-200 bg-transparent p-1 rounded-sm right-[.55rem] top-[6px]">
@@ -686,7 +685,7 @@ function getDifferenceParams(m: IMessage): { k: string, v: string }[] {
 								{{ item?.title || '新建对话' }}
 							</div>
 							<div class="flex gap-1 -ml-2">
-								<icon-trash @click="deleteConversations(index)" :size="16" class="min-w-[20px] text-neutral-400 hover:text-neutral-100" />
+								<icon-trash @click.stop.prevent="deleteConversations(index)" :size="16" class="min-w-[20px] text-neutral-400 hover:text-neutral-100" />
 							</div>
 						</div>
 					</div>

@@ -2,8 +2,7 @@
 import { rmSync } from 'node:fs'
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
-import electron from 'vite-plugin-electron'
-import renderer from 'vite-plugin-electron-renderer'
+import electron from 'vite-plugin-electron/simple'
 import pkg from './package.json'
 import electronPath from 'electron'
 import { spawn } from 'node:child_process'
@@ -13,42 +12,44 @@ export default defineConfig(() => {
     return {
         plugins: [
             vue(),
-            electron([
-                {
-                    entry: 'electron/index.js',
-                    onstart() {
-                        if (process.electronApp) {
-                            process.electronApp.removeAllListeners()
-                            process.electronApp.kill()
-                        }
-                        process.electronApp = spawn(electronPath as any, ['.', '--no-sandbox'])
-                        process.electronApp.once('exit', process.exit)
-                        //  解决中文乱码问题
-                        process.electronApp.stdout?.on('data', (data) => {
-                            const str = data.toString().trim()
-                            str && console.log(str)
-                        })
-                        process.electronApp.stderr?.on('data', (data) => {
-                            const str = data.toString().trim()
-                            str && console.error(str)
-                        })
-                    },
-                    vite: {
-                        build: {
-                            sourcemap: false,
-                            minify: true,
-                            outDir: 'dist-electron',
-                            target: 'node18',
-                            chunkSizeWarningLimit: Infinity,
-                            reportCompressedSize: false,
-                            rollupOptions: {
-                                external: Object.keys('dependencies' in pkg ? pkg.dependencies : {})
-                            }
-                        }
-                    }
-                }
-            ]),
-            renderer()
+            electron({
+	            main: {
+		            entry: 'electron/index.js',
+		            onstart() {
+			            if (process.electronApp) {
+				            process.electronApp.removeAllListeners()
+				            process.electronApp.kill()
+			            }
+			            process.electronApp = spawn(electronPath as any, ['.', '--no-sandbox'])
+			            process.electronApp.once('exit', process.exit)
+			            //  解决中文乱码问题
+			            process.electronApp.stdout?.on('data', (data) => {
+				            const str = data.toString().trim()
+				            str && console.log(str)
+			            })
+			            process.electronApp.stderr?.on('data', (data) => {
+				            const str = data.toString().trim()
+				            str && console.error(str)
+			            })
+		            },
+		            vite: {
+			            build: {
+				            sourcemap: false,
+				            minify: true,
+				            outDir: 'dist-electron',
+				            target: 'node18',
+				            chunkSizeWarningLimit: Infinity,
+				            reportCompressedSize: false,
+				            rollupOptions: {
+					            external: Object.keys('dependencies' in pkg ? pkg.dependencies : {})
+				            }
+			            }
+		            }
+	            },
+	            preload: {
+					input: 'electron/preload.js'
+	            }
+            })
         ],
         resolve: {
             alias: {
