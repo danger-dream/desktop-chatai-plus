@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+	@apply font-mono;
+	font-size: 15px;
+	line-height: 24px;
+	font-weight: 400;
+	
+	color: #0F0F0F;
+	background-color: #F6F6F6;
+	font-synthesis: none;
+	text-rendering: optimizeLegibility;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	-webkit-text-size-adjust: 100%;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		color: #F6F6F6;
+		background-color: #2F2F2F;
+	}
+	a:hover {color: #24C8DB;}
+	input, button {color: #FFFFFF;background-color: #0F0F0F98;}
+	button:active {background-color: #0F0F0F69;}
+}
+
+html,body {background-color: transparent !important; margin: 0; overflow: hidden; border-radius: 8px;}
+#app {border-radius: 8px;}
+
+::-webkit-scrollbar-track {background-color: transparent;}
+::-webkit-scrollbar-thumb {background-color: #ccc;border-radius: 10px;cursor: pointer;}
+::-webkit-scrollbar-thumb:hover {background-color: #aaa;}
+.dark ::-webkit-scrollbar-track:hover {background-color: #2f2f2f;}
+::-webkit-scrollbar-track:hover {background-color: #f2f2f2;}
+
+::-webkit-scrollbar-corner {background-color: transparent;}
+::-webkit-scrollbar {width: 6px;height: 6px;}
+
+.prose { line-height: 24px; max-width: 100% !important; }
+.prose pre.hljs {display: flex;flex-direction: column;border-radius: 8px;line-height: 1.35;}
+.prose pre.hljs .hljs-header {display: flex;justify-content: space-between;padding: 10px;background: #343541;font-size: 0.75rem;line-height: 1rem;border-radius: 8px 8px 0 0;color: rgb(217,217,227);}
+.hljs-header {cursor: default;}
+.hljs-header .title-lang { font-size: .9rem; }
+.hljs-header .code-copy-btn { font-size: .8rem; }
+.hljs-header button {cursor: pointer;}
+pre.hljs + pre.hljs {margin-top: 10px !important;}
+pre { padding: 0!important; }
+.prose :where(code) { font-size: .9rem; }
+.prose :where(p), .prose :where(ol), .prose :where(ul), .prose :where(pre) { margin-top: .75rem!important;margin-bottom: .75rem!important; }
+.prose :where(.prose>:first-child) { margin-top: 0!important; }
+.prose :where(.prose>:last-child) { margin-bottom: 0!important; }
+.prose :where(ul > li):not(:where([class~="not-prose"],[class~="not-prose"] *))::marker {color: #0F0F0F69!important;}
+.dark .prose :where(ul > li):not(:where([class~="not-prose"],[class~="not-prose"] *))::marker {color: #f2f2f2!important;}
+pre code.hljs { padding: .6em !important; }
+
+.backtop {position: absolute;right: 25px;z-index: 3000;padding: 6px;border-radius: 1rem;cursor: pointer;line-height: .6rem}
+.backtop svg {width: 0.6rem !important;height: 0.6rem !important;}
+input:focus-visible, select:focus-visible, textarea:focus-visible {outline-style: none;}

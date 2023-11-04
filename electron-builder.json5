@@ -1,0 +1,50 @@
+{
+	"productName": "Desktop ChatAI Plus",
+	"appId": "com.chataiplus.app",
+	"asar": true,
+	"compression": 'maximum',
+	"icon": "public/favicon.ico",
+	"directories": {
+		"output": "release"
+	},
+	"artifactName": "chatai-${version}-${platform}-${arch}.${ext}",
+	"publish": [
+		{
+			provider: 'github',
+			owner: 'danger-dream',
+			repo: 'Desktop-ChatAI-Plus',
+		},
+	],
+	"files": [
+		"dist-electron",
+		"dist"
+	],
+	"win": {
+		icon: 'public/icons/icon.ico',
+		"target": [
+			{ "target": "zip", "arch": ["x64", 'ia32'] },
+			{ target: 'nsis', arch: ['x64', 'ia32'] }
+		],
+	},
+	"nsis": {
+		"shortcutName": 'chatai',
+		"oneClick": false,
+		"allowToChangeInstallationDirectory": true,
+	},
+	"mac": {
+		"icon": "public/icons/icon.icns",
+		"category": "public.app-category.developer-tools",
+		"target": { "target": "dmg", "arch": ["x64", "arm64"] },
+	},
+	"dmg": {
+		"contents": [
+			{ "x": 410, "y": 150, "type": 'link', "path": '/Applications' },
+			{ "x": 130, "y": 150, "type": 'file' }
+		]
+	},
+	"linux": {
+		"icon": 'public/icons/',
+		"publish": ['github'],
+		"target": 'deb',
+	}
+}

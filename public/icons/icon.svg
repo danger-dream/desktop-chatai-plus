@@ -1,0 +1,14 @@
+<svg width="1024" height="1024" xmlns="http://www.w3.org/2000/svg" fill="none">
+
+ <g>
+  <title>Layer 1</title>
+  <path stroke="null" id="svg_1" d="m512.14539,10.99988a511.14539,505.49711 0 1 1 -230.84604,956.65328l-7.73107,-4.10716l-232.89062,57.5003a31.94659,31.59357 0 0 1 -39.61377,-27.86553l0,-5.18135l0.8945,-5.24453l58.14279,-230.25393l-4.02527,-7.58246a507.95074,502.33775 0 0 1 -53.03133,-182.42127l-1.59733,-24.13749l-0.44725,-21.86275a511.14539,505.49711 0 0 1 511.14539,-505.49711zm31.94659,568.68425l-191.67952,0l-5.75039,0.5055a31.94659,31.59357 0 0 0 0,62.17614l5.75039,0.5055l191.67952,0l5.75039,-0.5055a31.94659,31.59357 0 0 0 0,-62.17614l-5.75039,-0.5055zm127.78635,-189.56142l-319.46587,0l-5.75039,0.5055a31.94659,31.59357 0 0 0 0,62.17614l5.75039,0.5055l319.46587,0l5.75039,-0.5055a31.94659,31.59357 0 0 0 0,-62.17614l-5.75039,-0.5055z" fill="#279fda" class="cdxscopei"/>
+  <path stroke-dasharray="2,2" id="svg_2" d="m320,235c0,-13.58447 11.41553,-25 25,-25l460,0c13.58447,0 25,11.41553 25,25l0,13c0,13.58447 -11.41553,25 -25,25l-460,0c-13.58447,0 -25,-11.41553 -25,-25l0,-13z" opacity="undefined" stroke="null" fill="#e9e9e9"/>
+  <rect rx="25" stroke="null" id="svg_4" height="63" width="384.99999" y="390" x="320" fill="#e9e9e9"/>
+  <rect rx="25" stroke="null" id="svg_5" height="63" width="260" y="580" x="320" fill="#e9e9e9"/>
+  <rect rx="10" id="svg_13" height="40" width="40" y="760" x="320" stroke="null" fill="#e9e9e9"/>
+  <rect rx="10" id="svg_14" height="40" width="40" y="760" x="400" stroke="null" fill="#e9e9e9"/>
+  <rect rx="10" id="svg_15" height="40" width="40" y="760" x="480" stroke="null" fill="#e9e9e9"/>
+  <text font-weight="normal" transform="matrix(12.0792 0 0 14.2156 -8676.5 -6095.43)" stroke="null" xml:space="preserve" text-anchor="start" font-family="'Dancing Script'" font-size="24" stroke-width="0" id="svg_16" y="482.87224" x="768.24398" fill="#e9e9e9">AI</text>
+ </g>
+</svg>
