@@ -1,0 +1,29 @@
+# CHANGELOG
+
+All notable changes to this project will be documented in this file.
+
+## [0.2.1] - 2023-11-5
+
+### Changed
+- 新增Icon组件，为不增加额外依赖，使用组件生成方式创建svg
+
+### Fixed
+- 修复输入框中按下Shift + Enter时不换行的问题，修正placeholder内容
+
+### Removed
+- Removed @tabler/icons-vue
+- Removed markdown-it-*
+
+## [0.2.0] - 2023-11-5
+
+### Added
+- 新增"分割对话"命令
+- 封装平台代码，使用electron ipc替换，方便移植到tauri
+
+### Changed
+- Update electron 19.1.9 to 27.0.3
+- Update electron-builder 23.6.0 to 24.6.4
+
+### Removed
+- Removed vite-plugin-electron-renderer
+- Removed @electron/remote

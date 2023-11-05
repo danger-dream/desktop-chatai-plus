@@ -21,12 +21,10 @@
 	"win": {
 		icon: 'public/icons/icon.ico',
 		"target": [
-			{ "target": "zip", "arch": ["x64", 'ia32'] },
-			{ target: 'nsis', arch: ['x64', 'ia32'] }
+			{ "target": "zip", "arch": ["x64"] }
 		],
 	},
 	"nsis": {
-		"shortcutName": 'chatai',
 		"oneClick": false,
 		"allowToChangeInstallationDirectory": true,
 	},

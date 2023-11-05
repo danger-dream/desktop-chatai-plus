@@ -5,7 +5,7 @@ import { ref, computed, reactive, onMounted, watch, nextTick } from 'vue'
 import {
 	IconPlus, IconPinned, IconPinnedOff, IconSend, IconClipboard, IconMoon, IconSun, IconRobotFace, IconUserSquareRounded,
 	IconArrowBarToUp, IconArrowBarToDown, IconReload, IconTrash, IconMessage, IconSettings
-} from '@tabler/icons-vue'
+} from '@/components/icon'
 import Setting from './Setting.vue'
 import generate_prompt from './prompt_functions'
 import { createMd, formatTime, copy, highlightAll } from './utils'
@@ -317,6 +317,19 @@ function handleScroll() {
 	}, 1000 * 3)
 }
 
+function onKeyDown(e: KeyboardEvent) {
+	if (e.shiftKey && e.key === 'Enter') {
+	
+	} else if (e.key === 'Enter') {
+		e.preventDefault()
+		onChat().catch()
+	} else if (e.key === 'Escape') {
+		e.preventDefault()
+		state.hits = []
+		state.show_template = false
+	}
+}
+
 async function onChat() {
 	if (!state.prompt.trim() || state.is_wait_answer) return
 	state.is_wait_answer = true
@@ -484,7 +497,7 @@ async function onChat() {
 			messages.value.pop()
 			state.prompt = old_prompt
 		}
-		
+		highlightAll()
 		if (state.is_stop_stream) {
 			if (result.content.length > 0) {
 				await save()
@@ -639,9 +652,9 @@ function getDifferenceParams(m: IMessage): { k: string, v: string }[] {
 						<div class="flex flex-col w-full py-2 flex-grow relative border border-black/10 bg-white dark:border-gray-900/50 dark:text-white dark:bg-[#40414F] rounded-md shadow-[0_0_10px_rgba(0,0,0,0.10)] dark:shadow-[0_0_15px_rgba(0,0,0,0.10)]">
 							<textarea ref="textareaRef" class="max-h-[176px] text-black dark:text-white m-0 w-full resize-none outline-none border-0 bg-transparent p-0 pr-9 focus:ring-0 focus-visible:ring-0 dark:bg-transparent pl-2"
 								:style="{ bottom: state.height + 'px', overflow: state.height > 176 ? 'auto' : 'hidden' }"
-								placeholder="请输入您的问题，使用[Ctrl / Alt] + Enter快速提问"
+								placeholder="请输入您的问题，Enter 提问，Shift + Enter 换行"
 								v-model="state.prompt" @input="autoResize"
-								@keydown.enter.stop.prevent="onChat"
+								@keydown='onKeyDown'
 								:disabled="state.is_wait_answer" :rows="1">
 							</textarea>
 							<button @click="onChat" class="absolute focus:outline-none text-neutral-800 hover:text-neutral-900 dark:text-neutral-100 dark:hover:text-neutral-200 dark:bg-opacity-50 hover:bg-neutral-200 bg-transparent p-1 rounded-sm right-[.55rem] top-[6px]">

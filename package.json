@@ -33,35 +33,24 @@
 	},
 	"homepage": "https://github.com/danger-dream/desktop-chatai-plus#readme",
 	"dependencies": {
-		"js-tiktoken": "1.0.7",
 		"highlight.js": "11.9.0",
+		"js-tiktoken": "1.0.7",
 		"markdown-it": "13.0.2",
-		"markdown-it-abbr": "1.0.4",
-		"markdown-it-deflist": "2.1.0",
-		"markdown-it-emoji": "2.0.2",
-		"markdown-it-footnote": "3.0.3",
-		"markdown-it-ins": "3.0.1",
-		"markdown-it-link-attributes": "4.0.1",
-		"markdown-it-mark": "3.0.1",
-		"markdown-it-sub": "1.0.0",
-		"markdown-it-sup": "1.0.0",
-		"markdown-it-task-lists": "2.1.1",
 		"vue": "3.3.7"
 	},
 	"devDependencies": {
-		"@tabler/icons-vue": "2.39.0",
 		"@tailwindcss/typography": "0.5.10",
-		"@vitejs/plugin-vue": "4.4.0",
 		"@types/markdown-it": "13.0.5",
+		"@vitejs/plugin-vue": "4.4.0",
 		"autoprefixer": "10.4.16",
 		"electron": "27.0.3",
 		"electron-builder": "24.6.4",
 		"postcss": "8.4.31",
 		"sass": "1.69.4",
 		"tailwindcss": "3.3.4",
+		"ts-node": "10.9.1",
 		"vite": "4.5.0",
-		"vite-plugin-electron": "0.14.1",
-		"ts-node": "10.9.1"
+		"vite-plugin-electron": "0.14.1"
 	},
 	"engines": {
 		"node": "18"
