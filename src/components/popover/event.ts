@@ -1,17 +1,16 @@
 
-class EE {
-	constructor(
-		public fn: Function,
-		public once: boolean = false) {
-	}
+interface EE {
+	fn: Function
+	once: boolean
 }
+
 class Events {
 	
 	private readonly _events: Record<string, EE[]> = {}
 	
 	addListener(event: string, fn: Function, once: boolean = false): this {
 		if (!event || !fn) return this
-		const listener = new EE(fn, once)
+		const listener = { fn, once }
 		if (!this._events[event]) {
 			this._events[event] = [listener]
 		} else {

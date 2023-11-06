@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, reactive, computed, useAttrs, nextTick, ref } from 'vue'
 import { events } from './event'
-import { getFixedPositionParents, getMaxZIndex } from './utils'
 
 const pointerSize = 6
 const directions = { left: [-1, 0], right: [1, 0], top: [0, 1], bottom: [0, -1] }
@@ -11,6 +10,7 @@ defineOptions({ inheritAttrs: false })
 const props = defineProps({
 	name: { type: String, required: true },
 	width: { type: Number, default: 180 },
+	zIndex: { type: Number, default: 999 },
 	pointer: { type: Boolean, default: true },
 	event: { type: String, default: 'click' },
 	showPosition: { type: String, default: 'bottom' },
@@ -20,9 +20,8 @@ const emit = defineEmits(['show', 'hide'])
 const dropdown = ref<HTMLElement>()
 const state = reactive({
 	visible: false,
-	zIndex: 999,
 	positionClass: '',
-	fixedParents: [] as Element[],
+	fixedParent: false,
 	position: { left: '0px', top: '0px' }
 })
 const showEventName = `show:${ props.name }:${ props.event }`
@@ -32,10 +31,10 @@ const className = computed(() => ['vue-popover', props.pointer && state.position
 const style = computed(() => {
 	const styles: Record<string, any> = {
 		width: `${ props.width }px`,
-		zIndex: state.zIndex,
+		zIndex: props.zIndex,
 		...state.position
 	}
-	if (state.fixedParents.length > 0) {
+	if (state.fixedParent) {
 		styles.position = 'fixed'
 	}
 	return styles
@@ -78,33 +77,38 @@ function hideEventListener() {
 	}
 }
 
+export const isFixedPositionParents = (startElement: Element): boolean => {
+	let el = startElement as any
+	while (el?.parentNode && el?.parentNode?.tagName !== 'BODY') {
+		if (window.getComputedStyle(el).position === 'fixed') {
+			return true
+		}
+		el = el.parentNode
+	}
+	return false
+}
+
 function getDropdownPosition(target: HTMLElement) {
 	try {
 		const direction = directions[props.showPosition]
 		const trRect = target.getBoundingClientRect()
 		const ddRect = dropdown.value.getBoundingClientRect()
-		state.fixedParents = getFixedPositionParents(target)
-		state.zIndex = getMaxZIndex([target, ...state.fixedParents]) + 1
+		state.fixedParent = isFixedPositionParents(target)
 		
 		let offsetLeft = trRect.left
 		let offsetTop = trRect.top
 		
-		if (state.fixedParents.length === 0) {
+		if (state.fixedParent) {
 			const scrollTop = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop
 			const scrollLeft = window.scrollX || document.documentElement.scrollLeft || document.body.scrollLeft
-			// Position within the parent
 			offsetLeft = trRect.left + scrollLeft
 			offsetTop = trRect.top + scrollTop
 		}
-		// let shiftX = ddRect.width - trRect.width
 		let shiftY = 0.5 * (ddRect.height + trRect.height)
-		// Center of the target element
 		let centerX = offsetLeft - 0.5 * (ddRect.width - trRect.width)
 		let centerY = offsetTop + trRect.height - shiftY
-		// Position of the dropdown relatively to target
 		let x = direction[0] * 0.5 * (ddRect.width + trRect.width)
 		let y = direction[1] * shiftY
-		// Pointer size correction
 		if (props.pointer) {
 			x += direction[0] * pointerSize
 			y += direction[1] * pointerSize

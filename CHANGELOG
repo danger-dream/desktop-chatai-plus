@@ -2,10 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.2.1] - 2023-11-5
+## [0.2.1] - 2023-11-6
 
 ### Changed
 - 新增Icon组件，为不增加额外依赖，使用组件生成方式创建svg
+- 优化popver组件
 
 ### Fixed
 - 修复输入框中按下Shift + Enter时不换行的问题，修正placeholder内容
