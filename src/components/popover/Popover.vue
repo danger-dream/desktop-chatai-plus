@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup lang='ts'>
 import { onMounted, onUnmounted, reactive, computed, useAttrs, nextTick, ref } from 'vue'
 import { events } from './event'
 
@@ -14,7 +14,7 @@ const props = defineProps({
 	pointer: { type: Boolean, default: true },
 	event: { type: String, default: 'click' },
 	showPosition: { type: String, default: 'bottom' },
-	offset: { type: Object, default: { top: 0, left: 0 } }
+	offset: { type: Object, default: { top: 0, left: 0 } },
 })
 const emit = defineEmits(['show', 'hide'])
 const dropdown = ref<HTMLElement>()
@@ -22,7 +22,7 @@ const state = reactive({
 	visible: false,
 	positionClass: '',
 	fixedParent: false,
-	position: { left: '0px', top: '0px' }
+	position: { left: '0px', top: '0px' },
 })
 const showEventName = `show:${ props.name }:${ props.event }`
 const hideEventName = `hide:${ props.name }:${ props.event }`
@@ -32,7 +32,7 @@ const style = computed(() => {
 	const styles: Record<string, any> = {
 		width: `${ props.width }px`,
 		zIndex: props.zIndex,
-		...state.position
+		...state.position,
 	}
 	if (state.fixedParent) {
 		styles.position = 'fixed'
@@ -77,7 +77,7 @@ function hideEventListener() {
 	}
 }
 
-export const isFixedPositionParents = (startElement: Element): boolean => {
+function isFixedPositionParents(startElement: Element): boolean {
 	let el = startElement as any
 	while (el?.parentNode && el?.parentNode?.tagName !== 'BODY') {
 		if (window.getComputedStyle(el).position === 'fixed') {
@@ -130,22 +130,23 @@ function getDropdownPosition(target: HTMLElement) {
 defineExpose({
 	hide() {
 		hideEventListener()
-	}
+	},
 })
 </script>
 
 <template>
-	<div v-if="state.visible" :class="className" :style="style" :data-popover="props.name" @click.stop ref="dropdown" v-bind="attrs">
-		<slot/>
+	<div v-if='state.visible' :class='className' :style='style' :data-popover='props.name' @click.stop ref='dropdown' v-bind='attrs'>
+		<slot />
 	</div>
 </template>
 
-<style lang="scss">
+<style lang='scss'>
 $pointer-size: 6px;
 
 .dark .vue-popover {
 	--pointer-color: rgb(3 7 18 / 1);
 }
+
 .vue-popover {
 	--box-shadow-color: rgba(52, 73, 94, 0.1);
 	--filter-color: rgba(52, 73, 94, 0.1);
@@ -158,7 +159,7 @@ $pointer-size: 6px;
 	
 	z-index: 998;
 	
-	&:before {display: block;position: absolute;width: 0;height: 0;content: '';}
+	&:before {display: block;position: absolute;width: 0;height: 0;content: "";}
 	
 	&.dropdown-position-bottom:before {
 		border-left: $pointer-size solid transparent;
