@@ -10,9 +10,6 @@ contextBridge.exposeInMainWorld('__electron_', {
 	readFile: async (path, encoding = 'utf8') => {
 		return await ipcRenderer.invoke('os:readFile', path, encoding)
 	},
-	readJSONFile: async (path) => {
-		return await ipcRenderer.invoke('os:readJSONFile', path)
-	},
 	exists: async (path) => {
 		return await ipcRenderer.invoke('os:exists', path)
 	},
@@ -34,7 +31,7 @@ contextBridge.exposeInMainWorld('__electron_', {
 	showErrorBox: async (title, content) => {
 		return await ipcRenderer.invoke('os:showErrorBox', title, content)
 	},
-	showMessageBox: async (title, content, type = '', buttons = []) => {
+	showMessageBox: async (title, content, type = 'info', buttons = []) => {
 		return await ipcRenderer.invoke('os:showMessageBox', title, content, type, buttons)
 	},
 	showOpenDialog: async (opts = {}) => {

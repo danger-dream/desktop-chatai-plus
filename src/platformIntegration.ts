@@ -42,8 +42,8 @@ class ElectronIntegration implements IPlatformIntegration {
 		return electron.readFile(path)
 	}
 	
-	readJSONFile(path: string): Promise<any> {
-		return electron.readJSONFile(path)
+	async readJSONFile(path: string): Promise<any> {
+		return JSON.parse(await electron.readFile(path))
 	}
 	
 	exists(path: string): Promise<boolean> {

@@ -4,19 +4,21 @@ import { BasePlatform, HitPrompt, IConversation, ILLMResult, IMessage, IMessageP
 import { ref, computed, reactive, onMounted, watch, nextTick } from 'vue'
 import {
 	IconPlus, IconPinned, IconPinnedOff, IconSend, IconClipboard, IconMoon, IconSun, IconRobotFace, IconUserSquareRounded,
-	IconArrowBarToUp, IconArrowBarToDown, IconReload, IconTrash, IconMessage, IconSettings
+	IconArrowBarToUp, IconArrowBarToDown, IconReload, IconTrash, IconMessage, IconSettings, IconHeadphones, IconRefresh
 } from '@/components/icon'
 import Setting from './Setting.vue'
 import generate_prompt from './prompt_functions'
-import { createMd, formatTime, copy, highlightAll } from './utils'
+import { createMd, formatTime, copy, highlightAll, UUID } from './utils'
 import Platform from './platform'
 import Popover from '@/components/popover/Popover.vue'
 import Integration from './platformIntegration'
+import AudioPlus from '@/components/audio-plus/audio-plus.vue'
 
 const default_title = 'Desktop ChatAI Plus'
 let config_path = `config.json`
 let conversation_dir = `conversations`
 let conversation_file = `${conversation_dir}/conversations.json`
+let audio_catch_dir = `audios`
 const platformMap: Record<string, BasePlatform> = {}
 
 const md = createMd()
@@ -94,10 +96,11 @@ window.inputFocus = inputFocus
 
 async function saveConfig() {
 	try {
-		await Integration.writeFile(config_path, state.platform_default_config)
+		await Integration.writeJSONFile(config_path, state.platform_default_config)
 		await reloadConfig()
 		await Integration.showMessageBox('提示', '配置保存成功')
-	} catch {}
+	} catch {
+	}
 }
 
 function toggleTheme() {
@@ -113,32 +116,37 @@ async function toggleAlwaysOnTop() {
 }
 
 onMounted(async () => {
+	//  获取程序执行路径
 	const cwd = await Integration.cwd()
+	//  组装路径
 	config_path = `${cwd}/config.json`
 	conversation_dir = `${cwd}/conversations`
 	conversation_file = `${conversation_dir}/conversations.json`
-	
+	audio_catch_dir = `${cwd}/audios`
+	// 是否固定窗口
 	if (localStorage.getItem('isAlwaysOnTop') === 'true') {
 		state.isAlwaysOnTop = true
 		await Integration.invokeMainFunction('setAlwaysOnTop', true)
 	}
-	if (localStorage.getItem('is_dark') === 'true') {
-		state.is_dark = true
-	}
+	// 是否深色模式
+	state.is_dark = localStorage.getItem('is_dark') === 'true'
 	if (state.is_dark) {
 		document.body.classList.add('dark')
 	}
-	if (!localStorage.getItem('__desktop-chatai-plus')) {
-		await Integration.invokeMainFunction('showMainWindow')
-		localStorage.setItem('__desktop-chatai-plus', 'true')
-		return
-	}
 	try {
+		// 读取配置文件
 		if (await Integration.exists(config_path)) {
 			Object.assign(state.platform_default_config, await Integration.readJSONFile(config_path) as ISystemConfig)
 		}
 	} catch{
 	}
+	//  初次加载时默认显示窗口
+	if (!localStorage.getItem('__desktop-chatai-plus')) {
+		await Integration.invokeMainFunction('showMainWindow')
+		localStorage.setItem('__desktop-chatai-plus', 'true')
+		return
+	}
+	// 加载系统配置
 	reloadConfig().catch()
 })
 
@@ -148,6 +156,7 @@ async function reloadConfig() {
 	state.is_stteing = false
 	state.is_stop_stream = false
 	state.is_wait_answer = false
+	// 初始化平台配置
 	for (let platform of Platform) {
 		try {
 			const k = platform.platformName
@@ -158,33 +167,43 @@ async function reloadConfig() {
 		} catch {
 		}
 	}
+	// 未进行平台配置时显示设置窗口
 	if (Object.keys(platformMap).length < 1) {
 		state.is_stteing = true
 		await Integration.invokeMainFunction('showMainWindow')
 		return
 	}
+	// 初始化自定义prompt模板
 	const res = generate_prompt(state, messages, platformMap)
 	prompts = res.prompts
 	searchPrompt = res.search
+	// 设置默认平台、模型、向量模型
 	state.config.platform = state.platform_default_config.platform
 	state.config.model = state.platform_default_config.model
 	state.config.embedding = state.platform_default_config.embedding
+	// 创建对话缓存目录
 	await Integration.mkdir(conversation_dir)
+	// 创建音频缓存目录
+	await Integration.mkdir(audio_catch_dir)
 	try {
+		// 读取对话列表
 		if (await Integration.exists(conversation_file)) {
 			state.conversations = await Integration.readJSONFile(conversation_file)
 		}
+		// 加载最近一次对话
 		if (state.conversations.length > 0) {
 			state.conversationIndex = 0
 			reloadMessages().catch()
-		} else {
-			createConversation()
+			return
 		}
 	} catch {
 		state.conversations = []
 	}
+	//  创建新对话
+	createConversation()
 }
 
+//  创建新对话
 function createConversation() {
 	state.is_created = true
 	state.conversationIndex = -1
@@ -202,6 +221,7 @@ function createConversation() {
 	})
 }
 
+// 保存对话列表
 function saveConversations() {
 	try {
 		Integration.writeJSONFile(conversation_file, state.conversations)
@@ -209,6 +229,7 @@ function saveConversations() {
 	}
 }
 
+// 切换对话
 function toggleConversations(index: number) {
 	if (state.conversationIndex === index) return
 	state.is_stop_stream = true
@@ -221,55 +242,73 @@ function toggleConversations(index: number) {
 	})
 }
 
+// 删除对话
 async function deleteConversations(index: number) {
 	if (index < 0 || index >= state.conversations.length) {
 		return
 	}
+	// 删除对话时会弹出提示框，需要将窗口置顶
 	if (!state.isAlwaysOnTop) {
 		await Integration.invokeMainFunction('setAlwaysOnTop', true)
 	}
-	Integration.showMessageBox('警告', '是否确认删除该对话？删除后将无法恢复，是否继续?', 'warning', ['取消', '继续']).then(async ({ response }) => {
+	Integration.showMessageBox(
+		'警告',
+		'是否确认删除该对话？删除后将无法恢复，是否继续?',
+		'warning',
+		['取消', '继续']
+	).then(async ({ response }) => {
 		if (!state.isAlwaysOnTop) {
 			await Integration.invokeMainFunction('setAlwaysOnTop', false)
 		}
-		if (response === 1) {
-			const conversationId = state.conversations[index].id
-			state.conversations.splice(index, 1)
-			saveConversations()
-			selectedConversationRef.value?.hide()
-			const conversation_file = `${conversation_dir}/${conversationId}.json`
-			await Integration.deleteFile(conversation_file)
-			if (index === state.conversationIndex) {
-				if (state.conversationIndex === 0) {
-					state.conversationIndex = -1
-				}
-				if (state.conversations.length < 1) {
-					createConversation()
-				} else {
-					toggleConversations(0)
-				}
+		if (response !== 1) {
+			return
+		}
+		// 获取序号对应的对话id
+		const conversationId = state.conversations[index].id
+		// 从对话列表中删除
+		state.conversations.splice(index, 1)
+		saveConversations()
+		// 关闭对话列表框
+		selectedConversationRef.value?.hide()
+		// 删除对话文件
+		const conversation_file = `${conversation_dir}/${conversationId}.json`
+		const messages = await loadMessageFile(conversationId)
+		
+		await Integration.deleteFile(conversation_file)
+		if (index === state.conversationIndex) {
+			if (state.conversationIndex === 0) {
+				state.conversationIndex = -1
+			}
+			if (state.conversations.length < 1) {
+				createConversation()
+			} else {
+				toggleConversations(0)
 			}
 		}
 	})
 }
 
+async function loadMessageFile(id:string) {
+	try {
+		return await Integration.readJSONFile(`${conversation_dir}/${id}.json`)
+	} catch {
+		return []
+	}
+}
+
 async function reloadMessages() {
 	if (!conversation.value) return
-	try {
-		messages.value = await Integration.readJSONFile(`${conversation_dir}/${conversation.value.id}.json`)
-		for (const item of messages.value) {
-			//  合并配置
-			if (item.params) {
-				Object.assign(state.config, item.params)
-			}
+	messages.value = await loadMessageFile(conversation.value.id)
+	for (const item of messages.value) {
+		//  合并配置，让当前对话配置适配最后一条消息的配置
+		if (item.params) {
+			Object.assign(state.config, item.params)
 		}
-	} catch {
-		messages.value = []
 	}
-	if (messages.value.length) {
-		state.is_created = false
-	}
+	state.is_created = messages.value.length < 1
+	// 等待ui消息列表显示完成
 	await nextTick()
+	// 高亮代码
 	highlightAll()
 	inputFocus()
 	handleScroll()
@@ -279,6 +318,14 @@ async function reloadMessages() {
 	}
 }
 
+async function saveMessage(conversation_id: string) {
+	try {
+		await Integration.writeJSONFile(`${conversation_dir}/${conversation_id}.json`, messages.value.filter(x => !x.is_delete))
+	} catch{
+	}
+}
+
+// 计算高度
 function autoResize() {
 	const max_line = 8
 	textareaRef.value.style.height = '20px'
@@ -288,11 +335,11 @@ function autoResize() {
 	state.input_box_h = inputBox.value ? inputBox.value.scrollHeight : 0
 	state.scrollHeight = inputBox.value ? `calc(100% - ${ inputBox.value.scrollHeight + 37 }px)` : '100%'
 }
-
-let tb_btn_interval = undefined
-
+// move top and move bottom btn hide timeout
+let tb_btn_timeout = undefined
+// 处理是否显示移动到顶部、底部按钮以及是否锁定滚动条
 function handleScroll() {
-	clearTimeout(tb_btn_interval)
+	clearTimeout(tb_btn_timeout)
 	state.show_top_bottom_btn = true
 	state.inputBoxHeight = inputBox.value?.scrollHeight ?? 0
 	if (scroll.value) {
@@ -312,19 +359,20 @@ function handleScroll() {
 		}
 		scrollTop = scroll.value.scrollTop
 	}
-	tb_btn_interval = setTimeout(function () {
+	tb_btn_timeout = setTimeout(function () {
 		state.show_top_bottom_btn = false
 	}, 1000 * 3)
 }
 
 function onKeyDown(e: KeyboardEvent) {
 	if (e.shiftKey && e.key === 'Enter') {
-	
+		// 不处理shift + enter，使输入框可正常换行
 	} else if (e.key === 'Enter') {
 		e.preventDefault()
 		onChat().catch()
 	} else if (e.key === 'Escape') {
 		e.preventDefault()
+		// 隐藏prompt提示框
 		state.hits = []
 		state.show_template = false
 	}
@@ -426,18 +474,18 @@ async function onChat() {
 		cur_conversation = conversation.value
 	}
 	messages.value.push(
-		{ role: 'user', content: prompt, created: Date.now(), params: JSON.parse(JSON.stringify(state.config)), skip_relation },
-		{ created: Date.now(), content: '', role: 'assistant', ended: false, is_end: false, is_truncated: false, total_tokens: 0 }
+		{ id: UUID(), role: 'user', content: prompt, created: Date.now(), params: JSON.parse(JSON.stringify(state.config)) },
+		{ id: UUID(), role: 'assistant', content: '', created: 0, ended: false, is_end: false, total_tokens: 0, autio_path: '' }
 	)
 	await nextTick()
 	const m: IMessage = messages.value[messages.value.length - 1]
 	scroll.value.scrollTop = scroll.value.scrollHeight
 	m.content = '正在分析，请稍后...'
 	let isOutput = false
-	
+	const start_time = Date.now()
 	const updateTime = () => {
 		if (isOutput || !state.is_wait_answer) return
-		m.content = `正在分析...已等待: ${ formatTime(m.created) }`
+		m.content = `正在分析...已等待: ${ formatTime(start_time) }`
 		requestAnimationFrame(updateTime)
 	}
 	
@@ -470,12 +518,10 @@ async function onChat() {
 		}
 		
 		async function save() {
+			m.created = Date.now()
 			m.ended = true
 			m.total_tokens = result.total_tokens
-			try {
-				await Integration.writeJSONFile(`${conversation_dir}/${conversation_id}.json`, messages.value.filter(x => !x.is_delete))
-			} catch{
-			}
+			await saveMessage(conversation_id)
 			if (cur_conversation) {
 				const r = await platform.completion('请帮我把下面的问答提取为简短的标题，该标题用于在html的200px的div中显示，绝不允许添加任何不相关的内容:\n\n' + prompt + '\n\n' + m.content + '\n\n标题:', {
 					model: state.config.model,
@@ -497,7 +543,6 @@ async function onChat() {
 			messages.value.pop()
 			state.prompt = old_prompt
 		}
-		highlightAll()
 		if (state.is_stop_stream) {
 			if (result.content.length > 0) {
 				await save()
@@ -520,13 +565,19 @@ async function onChat() {
 	state.is_created = false
 	state.is_wait_answer = false
 	await nextTick()
+	m.ended && highlightAll()
 	autoResize()
 	if (isLockScroll) {
 		scroll.value.scrollTop = scroll.value.scrollHeight
 		handleScroll()
 	}
+	// 自动播放音频
+	if (m.ended && state.platform_default_config.auto_play_audio) {
+		onLoadAudio(m, true).catch()
+	}
 }
 
+// 停止流传输
 function stop_chat() {
 	try {
 		state.is_stop_stream = true
@@ -539,6 +590,39 @@ function getDifferenceParams(m: IMessage): { k: string, v: string }[] {
 	return Object.keys(state.config).filter(x => x !== 'platform' && m.params[x] !== state.config[x]).map(k => {
 		return { k: k.substring(0, 1).toUpperCase() + k.substring(1), v: (m.params[k] + '').toUpperCase() }
 	})
+}
+
+// 加载音频
+async function onLoadAudio(m: IMessage, reload = false) {
+	if (m.autio_path === 'loading' || !platformMap['openai']) return
+	if (m.autio_path && !reload) {
+		return
+	}
+	m.autio_path = 'loading'
+	const openai = platformMap['openai']
+	const conf = state.platform_default_config['openai']
+	try {
+		const str = m.content.replaceAll(/```(?:[\w-]+)?\s*?\n[\s\S]*?\n```/gm, '。').replace(/^\s*$\n/gm, '').trim()
+		const resp = await openai.speech(str, {
+			tts_model: conf.tts_model,
+			tts_voice: conf.tts_voice,
+			tts_speed: conf.tts_speed
+		})
+		if (resp?.byteLength) {
+			const audio_path = `${audio_catch_dir}/${m.id}.mp3`
+			if (await Integration.writeFile(audio_path, resp)) {
+				if (m.autio_path !== audio_path) {
+					m.autio_path = audio_path
+					await saveMessage(conversation.value.id)
+					await nextTick()
+					scroll.value.scrollTop = scroll.value.scrollHeight
+				}
+				return
+			}
+		}
+	} catch {
+	}
+	m.autio_path = ''
 }
 </script>
 
@@ -616,11 +700,26 @@ function getDifferenceParams(m: IMessage): { k: string, v: string }[] {
 							<!-- 内容 -->
 							<div class="w-[calc(100%-30px)] dark:opacity-70 min-h-[20px] flex flex-col items-start break-words">
 								<div v-html="md.render(m.content)" class="markdown prose w-full break-words dark:prose-invert"></div>
+								<!-- 音频播放组件 -->
+								<audio-plus v-if="m.autio_path && m.autio_path !== 'loading'" :url="m.autio_path"
+									:play="state.platform_default_config.auto_play_audio || false"
+									class="mt-4" :class="index === messages.length - 1 ? 'mb-5' : 'mb-4'" />
 							</div>
 						</div>
-						<!-- 复制按钮 -->
-						<div v-if="m.role === 'user' || m.ended" class="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100" v-tooltip="'拷贝至剪切板'">
-							<icon-clipboard @click="copy(m.content)" class="cursor-pointer opacity-40 hover:opacity-70 active:opacity-100" :size="18" />
+						<!-- 音频播放、复制按钮 -->
+						<div v-if="m.role === 'user' || m.ended" :class="m.autio_path === 'loading' ? 'opacity-100' : ''" class='absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 flex items-center gap-2'>
+							<div v-if="m.role !== 'user' && !m.autio_path" v-tooltip="'播放音频'" @click='onLoadAudio(m)'>
+								<icon-headphones class="cursor-pointer opacity-40 hover:opacity-70 active:opacity-100" :size="18" />
+							</div>
+							<div v-if="m.role !== 'user' && m.autio_path === 'loading'" v-tooltip="'正在生成音频'">
+								<icon-reload class="animate-spin opacity-60" :size="18" />
+							</div>
+							<div v-if="m.autio_path && m.autio_path !== 'loading'" v-tooltip="'重新生成音频'" @click='onLoadAudio(m, true)'>
+								<icon-refresh class="cursor-pointer opacity-40 hover:opacity-70 active:opacity-100" :size="18" />
+							</div>
+							<div v-tooltip="'拷贝至剪切板'">
+								<icon-clipboard @click="copy(m.content)" class="cursor-pointer opacity-40 hover:opacity-70 active:opacity-100" :size="18" />
+							</div>
 						</div>
 					</div>
 				</div>

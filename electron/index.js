@@ -103,16 +103,16 @@ function platformIntegration(win) {
 	ipcMain.handle('os:writeFile', async (e, path, data) => {
 		try {
 			if (!path || !data) return false
-			fs.writeFileSync(path, typeof data === 'string' || Buffer.isBuffer(data) ? data : JSON.stringify(data))
-		} catch {
-			return false
-		}
-	})
-	
-	ipcMain.handle('os:writeJSONFile', async (e, path, data, beautify) => {
-		try {
-			if (!path || !data) return false
-			fs.writeFileSync(path, typeof data === 'string' || Buffer.isBuffer(data) ? data : (beautify ? JSON.stringify(data, null, '\t') : JSON.stringify(data)))
+			let buf
+			if (typeof data === 'string' || Buffer.isBuffer(data)) {
+				buf = data
+			} else if (data instanceof ArrayBuffer) {
+				buf = Buffer.from(data)
+			} else {
+				buf = JSON.stringify(data, undefined, '\t')
+			}
+			fs.writeFileSync(path, buf)
+			return true
 		} catch {
 			return false
 		}
@@ -122,15 +122,6 @@ function platformIntegration(win) {
 		if (!path || !fs.existsSync(path) || fs.statSync(path).isDirectory()) return ''
 		if (!encoding || typeof encoding !== 'string') encoding = 'utf8'
 		return fs.readFileSync(path, encoding)
-	})
-	
-	ipcMain.handle('os:readJSONFile', async (e, path) => {
-		if (!path || !fs.existsSync(path) || fs.statSync(path).isDirectory()) return ''
-		try {
-			return JSON.parse(fs.readFileSync(path, 'utf8'))
-		} catch {
-			return ''
-		}
 	})
 	
 	ipcMain.handle('os:exists', async (e, path) => {
@@ -206,7 +197,7 @@ function platformIntegration(win) {
 		dialog.showErrorBox(title, content)
 	})
 	
-	ipcMain.handle('os:showMessageBox', async (e, title, content, type, buttons) => {
+	ipcMain.handle('os:showMessageBox', async (e, title, content, type = 'info', buttons = []) => {
 		return dialog.showMessageBox({
 			title,
 			message: content,

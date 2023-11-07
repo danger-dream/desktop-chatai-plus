@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.3] - 2023-11-7
+
+### Changed
+- 新增OpenAI最新模型支持：gpt-3.5-turbo-1106
+- 增加OpenAI TTS模型语音朗读回复功能及相关设置
+
+### Fixed
+- 修复无法保存配置的问题
+- 修复无法弹出MessageBox的问题
+- 修复使用"分割对话"命令后的当前对话无法关联的问题
+
 ## [0.2.2] - 2023-11-7
 
 ### Changed

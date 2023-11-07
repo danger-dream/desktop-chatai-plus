@@ -207,4 +207,8 @@ export default class Wenxin implements BasePlatform {
 			return 0
 		}
 	}
+	
+	speech(text: string, opts?: Record<string, any>): Promise<ArrayBuffer> {
+		throw new Error('Method not implemented.')
+	}
 }

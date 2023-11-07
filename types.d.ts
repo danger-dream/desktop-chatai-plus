@@ -39,6 +39,8 @@ export declare class BasePlatform {
 	completion(messages: Message[] | Message | string, options?: ILLMOptions, chunk_callback?: ChunkFunction): Promise<ILLMResult>
 	
 	count_tokens(text: string): number
+	
+	speech(text: string, opts?: Record<string, any>): Promise<ArrayBuffer>
 }
 
 export interface IPlatformConfig extends Record<string, any> {
@@ -51,6 +53,9 @@ export interface IPlatformConfig extends Record<string, any> {
 	splitter_chunk_size: number
 	splitter_chunk_overlap: number
 	dimension: number
+	tts_model?: string
+	tts_voice?: string
+	tts_speed?: number
 }
 
 type PlatformKeys = 'openai' | 'wenxin' | 'qwen'
@@ -62,6 +67,7 @@ export interface ISystemConfig {
 	embedding: PlatformKeys
 	max_related_message_num: number
 	topK: number
+	auto_play_audio: boolean
 }
 
 export interface IMessageParams {
@@ -93,17 +99,20 @@ export interface IConversation {
 }
 
 export interface IMessage {
+	id: string
 	role: 'user' | 'assistant' | 'system'
-	content?: string
+	created: number
+	content: string
+	
+	params?: IMessageParams
+	is_delete?: boolean
+	
 	ended?: boolean
 	is_end?: boolean
-	is_truncated?: boolean
 	total_tokens?: number
-	params?: IMessageParams
-	created: number
 	skip_relation?: boolean
-	is_delete?: boolean
 	split?: boolean
+	autio_path?: string
 }
 
 export interface HitPrompt {

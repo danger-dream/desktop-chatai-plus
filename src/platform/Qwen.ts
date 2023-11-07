@@ -127,6 +127,10 @@ export default class Qwen implements BasePlatform {
 		}
 		return tokens.filter(x => x.trim()).length
 	}
+	
+	speech(text: string, opts?: Record<string, any>): Promise<ArrayBuffer> {
+		throw new Error('Method not implemented.')
+	}
 }
 
 const data_header_length = 'data:'.length

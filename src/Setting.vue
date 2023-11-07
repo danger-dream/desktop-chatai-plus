@@ -3,11 +3,23 @@ import { reactive, computed, PropType, watch } from 'vue'
 import Platform from './platform'
 import { ISystemConfig } from '../types'
 
+const openai_tts_models = [
+	{ label: 'tts-1(快速)', value: 'tts-1' },
+	{ label: 'tts-1-hd(高质量)', value: 'tts-1-hd' }
+]
+const openai_tts_voice = [
+	{ label: 'alloy(男声-最佳)', value: 'alloy' },
+	{ label: 'nova(女声-最佳)', value: 'nova' },
+	{ label: 'onyx(低音男声)', value: 'onyx' },
+	{ label: 'shimmer(女生)', value: 'shimmer' },
+	{ label: 'echo', value: 'echo' },
+	{ label: 'fable', value: 'fable' },
+]
 const default_config: any = {
-	openai: { apiKey: '', basePath: 'https://api.openai.com/v1', round_max_tokens: 4000, splitter_chunk_size: 250, splitter_chunk_overlap: 0, dimension: 1536 },
+	openai: { apiKey: '', basePath: 'https://api.openai.com/v1', round_max_tokens: 4000, splitter_chunk_size: 250, splitter_chunk_overlap: 0, dimension: 1536, tts_model: 'tts-1', tts_voice: 'alloy', tts_speed: 1.0 },
 	wenxin: { client_id: '', client_secret: '', round_max_tokens: 3000, splitter_chunk_size: 300, splitter_chunk_overlap: 20, dimension: 384 },
 	qwen: { apiKey: '', round_max_tokens: 3000, splitter_chunk_size: 500, splitter_chunk_overlap: 20, dimension: 1536 },
-	platform: 'openai', model: 'gpt-4', embedding: 'openai', max_related_message_num: 15, topK: 3
+	platform: 'openai', model: 'gpt-4-1106-preview', embedding: 'openai', max_related_message_num: 15, topK: 3, auto_play_audio: false
 }
 
 const props = defineProps({
@@ -27,9 +39,26 @@ const state = reactive({
 })
 const emit = defineEmits([ 'update:config', 'save', 'cancel' ])
 
+function mergeObjects(target: any, source: any): any {
+	const isObject = (item: any) => (item !== null && typeof item === 'object' && !Array.isArray(item))
+	if (!isObject(source)) {
+		return target
+	}
+	Object.keys(source).forEach((key) => {
+		const targetValue = target[key]
+		const sourceValue = source[key]
+		if (!target.hasOwnProperty(key) || !isObject(targetValue)) {
+			target[key] = isObject(sourceValue) ? mergeObjects({}, sourceValue) : sourceValue
+		} else {
+			mergeObjects(targetValue, sourceValue)
+		}
+	})
+	return target
+}
+
 watch(() => props.config, (val) => {
 	if (!val) return
-	Object.assign(state.config, default_config, JSON.parse(JSON.stringify(val)))
+	Object.assign(state.config, mergeObjects(JSON.parse(JSON.stringify(default_config)), JSON.parse(JSON.stringify(val))))
 }, { immediate: true })
 
 watch(() => state.config.platform, (value) => {
@@ -76,8 +105,8 @@ function onSave() {
 				</template>
 			</div>
 		</div>
-		<div class="flex justify-around">
-			<div class="mb-4 border dark:border-slate-600 rounded-lg p-4 bg-white dark:bg-[#343541] max-w-[500px]">
+		<div class="flex justify-around w-full">
+			<div class="mb-4 border dark:border-slate-600 rounded-lg p-4 bg-white dark:bg-[#343541] w-[500px]">
 				<template v-if="state.active === 'openai'">
 					<div class="mb-4">
 						<label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Api Key</label>
@@ -127,7 +156,6 @@ function onSave() {
 								<label :for="'model-' + item" class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300">{{ item }}</label>
 							</div>
 						</div>
-					
 					</div>
 					<!-- 默认向量引擎 -->
 					<div class="mb-4">
@@ -140,18 +168,22 @@ function onSave() {
 						</div>
 					</div>
 					<!-- 最大关联消息数 -->
-					<div class="mb-2">
+					<div class="mb-4">
 						<label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
 							最大关联消息数: {{ state.config.max_related_message_num }}
 						</label>
 						<input v-model.number="state.config.max_related_message_num" type="range" min="0" max="50" step="2" class="w-full h-1 mb-6 bg-gray-200 rounded-lg appearance-none cursor-pointer range-sm dark:bg-gray-700"/>
 					</div>
 					<!-- top-k -->
-					<div class="mb-2">
+					<div class="mb-4">
 						<label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
 							Top-K: {{ state.config.topK }}
 						</label>
 						<input v-model.number="state.config.topK" type="range" min="1" max="20" step="1" class="w-full h-1 mb-6 bg-gray-200 rounded-lg appearance-none cursor-pointer range-sm dark:bg-gray-700"/>
+					</div>
+					<div class="flex items-center mb-4">
+						<input v-model="state.config.auto_play_audio" id="auto-play-audio-checkbox" type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded dark:ring-offset-gray-800 dark:bg-gray-700 dark:border-gray-600"/>
+						<label for="auto-play-audio-checkbox" class="ml-2 text-sm font-medium text-gray-900 dark:text-white">自动播放回复音频</label>
 					</div>
 				</template>
 				<template v-else>
@@ -170,13 +202,41 @@ function onSave() {
 						<input v-model.number="state.config[state.active].splitter_chunk_size" type="range" min="100" max="2000" step="10"
 							class="w-full h-1 mb-6 bg-gray-200 rounded-lg appearance-none cursor-pointer range-sm dark:bg-gray-700"/>
 					</div>
-					<div class="mb-2">
+					<div :class="state.active === 'openai' ? 'mb-2': 'mb-4'">
 						<label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
 							Chunk Overlap: {{ state.config[state.active].splitter_chunk_overlap }} (向量模型：相邻chunk之间的重叠token数量)
 						</label>
 						<input v-model.number="state.config[state.active].splitter_chunk_overlap" type="range" min="0" max="500" step="10"
 							class="w-full h-1 mb-6 bg-gray-200 rounded-lg appearance-none cursor-pointer range-sm dark:bg-gray-700"/>
 					</div>
+					
+					<template v-if="state.active === 'openai'">
+						<div class="mb-4">
+							<label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">TTS模型: </label>
+							<div class="flex">
+								<div v-for="item in openai_tts_models" :key="item.value" class="flex items-center mr-4" @click="state.config[state.active].tts_model = item.value">
+									<input :checked="state.config[state.active].tts_model === item.value" :id="'tts_model-' + item.value" type="radio" name="tts_model-group" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 dark:ring-offset-gray-800 dark:bg-gray-700 dark:border-gray-600">
+									<label :for="'tts_model-' + item.value" class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300">{{ item.label }}</label>
+								</div>
+							</div>
+						</div>
+						<div class="mb-4">
+							<label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">语音: </label>
+							<div class="flex flex-wrap">
+								<div v-for="item in openai_tts_voice" :key="item.value" class="flex items-center justify-items-start flex-grow flex-shrink-0" @click="state.config[state.active].tts_voice = item.value">
+									<input :checked="state.config[state.active].tts_voice === item.value" :id="'tts_voice-' + item.value" type="radio" name="tts_voice-group" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 dark:ring-offset-gray-800 dark:bg-gray-700 dark:border-gray-600">
+									<label :for="'tts_voice-' + item.value" class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300">{{ item.label }}</label>
+								</div>
+							</div>
+						</div>
+						<div class="mb-2">
+							<label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+								语速: {{ state.config[state.active].tts_speed }}
+							</label>
+							<input v-model.number="state.config[state.active].tts_speed" type="range" min="0.25" max="4.0" step="0.01"
+								class="w-full h-1 mb-6 bg-gray-200 rounded-lg appearance-none cursor-pointer range-sm dark:bg-gray-700"/>
+						</div>
+					</template>
 				</template>
 				<div class="flex justify-between items-center">
 					<div>

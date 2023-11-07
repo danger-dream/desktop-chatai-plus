@@ -17,6 +17,7 @@ release
 *.local
 build
 config.ts
+audios
 
 # Editor directories and files
 .vscode/.debug.env

@@ -5,7 +5,7 @@ const enc = getEncoding('cl100k_base')
 export default class OpenAI implements BasePlatform {
 	public static readonly label = 'OpenAI'
 	public static readonly platformName: PlatformKeys = 'openai'
-	public static readonly models = [ 'gpt-4-1106-preview', 'gpt-4-vision-preview', 'gpt-4', 'gpt-4-32k', 'gpt-3.5-turbo', 'gpt-3.5-turbo-16k' ]
+	public static readonly models = [ 'gpt-4-1106-preview', 'gpt-4-vision-preview', 'gpt-4', 'gpt-4-32k', 'gpt-3.5-turbo', 'gpt-3.5-turbo-1106', 'gpt-3.5-turbo-16k' ]
 	private readonly apiKey: string
 	private readonly basePath: string
 	
@@ -122,5 +122,19 @@ export default class OpenAI implements BasePlatform {
 		} catch {
 			return text.length
 		}
+	}
+	
+	async speech(text: string, opts?: Record<string, any>): Promise<ArrayBuffer> {
+		const model = opts?.model || 'tts-1'
+		const voice = opts?.voice || 'alloy'
+		const speed = opts?.speed ?? 1
+		const resp = await fetch(this.basePath + '/audio/speech', {
+			headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + this.apiKey},
+			method: 'POST', body: JSON.stringify({input: text, model, voice, speed})
+		})
+		if (resp.status === 200) {
+			return await resp.arrayBuffer()
+		}
+		throw new Error('speech failed')
 	}
 }
