@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.2] - 2023-11-7
+
+### Changed
+- 新增OpenAI最新模型支持：gpt-4-1106-preview、gpt-4-vision-preview
+- 切换默认模型为OpenAI: gpt-4-1106-preview
+
+
 ## [0.2.1] - 2023-11-6
 
 ### Changed
