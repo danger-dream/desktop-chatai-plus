@@ -41,6 +41,8 @@ export declare class BasePlatform {
 	count_tokens(text: string): number
 	
 	speech(text: string, opts?: Record<string, any>): Promise<ArrayBuffer>
+	
+	getSystemPrompt(): string
 }
 
 export interface IPlatformConfig extends Record<string, any> {
@@ -49,6 +51,7 @@ export interface IPlatformConfig extends Record<string, any> {
 	client_id?: string
 	client_secret?: string
 	
+	system_prompt?: string
 	round_max_tokens: number
 	splitter_chunk_size: number
 	splitter_chunk_overlap: number

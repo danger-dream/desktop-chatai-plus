@@ -94,11 +94,13 @@ function inputFocus() {
 
 window.inputFocus = inputFocus
 
-async function saveConfig() {
+async function saveConfig(showMsg = true) {
 	try {
 		await Integration.writeJSONFile(config_path, state.platform_default_config)
 		await reloadConfig()
-		await Integration.showMessageBox('提示', '配置保存成功')
+		if (showMsg) {
+			await Integration.showMessageBox('提示', '配置保存成功')
+		}
 	} catch {
 	}
 }
@@ -174,7 +176,11 @@ async function reloadConfig() {
 		return
 	}
 	// 初始化自定义prompt模板
-	const res = generate_prompt(state, messages, platformMap)
+	const res = generate_prompt(state, {
+		messages: messages, platforms: platformMap,
+		createConversation, saveConversations, toggleConversations, deleteConversations,
+		reloadMessages, saveMessage, toggleAlwaysOnTop, toggleTheme, saveConfig
+	})
 	prompts = res.prompts
 	searchPrompt = res.search
 	// 设置默认平台、模型、向量模型
@@ -273,7 +279,11 @@ async function deleteConversations(index: number) {
 		// 删除对话文件
 		const conversation_file = `${conversation_dir}/${conversationId}.json`
 		const messages = await loadMessageFile(conversationId)
-		
+		for (const m of messages) {
+			if (m.autio_path) {
+				await Integration.deleteFile(m.autio_path)
+			}
+		}
 		await Integration.deleteFile(conversation_file)
 		if (index === state.conversationIndex) {
 			if (state.conversationIndex === 0) {
@@ -417,9 +427,11 @@ async function onChat() {
 	if (!prompt) {
 		prompt = state.prompt
 	}
+	const platformStr = state.config.platform
+	const platform_config = state.platform_default_config[platformStr]
 	// 从配置中获取当前使用平台最大token数
-	const max_token = state.platform_default_config[state.config.platform].round_max_tokens
-	const platform = platformMap[state.config.platform]
+	const max_token = platform_config.round_max_tokens
+	const platform = platformMap[platformStr]
 	let total_tokens = platform.count_tokens(prompt)
 	if (total_tokens > max_token) {
 		await Integration.showErrorBox('错误', '输入文本长度超出允许的最大值')
@@ -510,6 +522,10 @@ async function onChat() {
 		if (handler) {
 			result = await handler(prompt, relations, onChunk)
 		} else {
+			const system_prompt = platform_config.system_prompt || platform.getSystemPrompt()
+			if (system_prompt) {
+				relations.splice(0,0, { role: 'system', content: system_prompt })
+			}
 			result = await platform.completion(relations, {
 				model: state.config.model,
 				temperature: state.config.temperature,

@@ -16,9 +16,9 @@ const openai_tts_voice = [
 	{ label: 'fable', value: 'fable' },
 ]
 const default_config: any = {
-	openai: { apiKey: '', basePath: 'https://api.openai.com/v1', round_max_tokens: 4000, splitter_chunk_size: 250, splitter_chunk_overlap: 0, dimension: 1536, tts_model: 'tts-1', tts_voice: 'alloy', tts_speed: 1.0 },
-	wenxin: { client_id: '', client_secret: '', round_max_tokens: 3000, splitter_chunk_size: 300, splitter_chunk_overlap: 20, dimension: 384 },
-	qwen: { apiKey: '', round_max_tokens: 3000, splitter_chunk_size: 500, splitter_chunk_overlap: 20, dimension: 1536 },
+	openai: { apiKey: '', basePath: 'https://api.openai.com/v1', round_max_tokens: 4000, splitter_chunk_size: 250, splitter_chunk_overlap: 0, dimension: 1536, tts_model: 'tts-1', tts_voice: 'alloy', tts_speed: 1.0, system_prompt: '' },
+	wenxin: { client_id: '', client_secret: '', round_max_tokens: 3000, splitter_chunk_size: 300, splitter_chunk_overlap: 20, dimension: 384, system_prompt: '' },
+	qwen: { apiKey: '', round_max_tokens: 3000, splitter_chunk_size: 500, splitter_chunk_overlap: 20, dimension: 1536, system_prompt: '' },
 	platform: 'openai', model: 'gpt-4-1106-preview', embedding: 'openai', max_related_message_num: 15, topK: 3, auto_play_audio: false
 }
 
@@ -187,6 +187,10 @@ function onSave() {
 					</div>
 				</template>
 				<template v-else>
+					<div class="mb-4">
+						<label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">系统提示：</label>
+						<textarea v-model="state.config[state.active].system_prompt" rows="4" class="block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" />
+					</div>
 					<div class="mb-4">
 						<label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
 							Round Max Tokens: {{ state.config[state.active].round_max_tokens }} (单次对话允许的最大token数)

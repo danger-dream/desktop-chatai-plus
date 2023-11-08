@@ -137,4 +137,11 @@ export default class OpenAI implements BasePlatform {
 		}
 		throw new Error('speech failed')
 	}
+	
+	getSystemPrompt(): string {
+		const dt = new Date()
+		return `You are ChatGPT, a large language model trained by OpenAI.
+Knowledge ctoff: 2023-04
+Current date: ${ dt.getFullYear()}-${ ((dt.getMonth() + 1) + '').padStart(2, '0') }-${ (dt.getDate() + '').padStart(2, '0') }`
+	}
 }

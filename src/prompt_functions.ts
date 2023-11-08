@@ -1,7 +1,9 @@
 import {Ref} from 'vue'
 import { BasePlatform, HitPrompt, IPromptFunction, SelectionHitResult, SearchPrompt, IMessage } from '../types';
 
-export default function generate_prompt(state: Record<string, any>, messages: Ref<IMessage[]>, platforms: Record<string, BasePlatform>): { prompts: IPromptFunction[], search: SearchPrompt } {
+export default function generate_prompt(state: Record<string, any>, opts: Record<string, any>): { prompts: IPromptFunction[], search: SearchPrompt } {
+	const messages: Ref<IMessage[]> = opts.messages
+	const platforms: Record<string, BasePlatform> = opts.platforms
 	const prompts: IPromptFunction[] = [
 		{
 			id: 'clear', keywords: ['clear', 'cls'], label: '清空消息', remarks: '清空当前对话的所有消息: /cls [提问...]',
@@ -19,6 +21,17 @@ export default function generate_prompt(state: Record<string, any>, messages: Re
 				return text.trim() ? text.trim() : false
 			}
 		},
+		{
+			id: 'system_prompt', keywords: ['sp', 'systemprompty'], label: '修改系统提示', remarks: '修改当前平台的系统提示: /sp 请你扮演.....',
+			callback(text: string) {
+				if (text.trim()) {
+					const def = platforms[state.config.platform].getSystemPrompt()
+					state.platform_default_config[state.config.platform].system_prompt = def + '\n\n' + text.trim()
+				}
+				opts.save_config(false)
+				return false
+			}
+		}
 		
 	]
 	

@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.4] - 2023-11-8
+
+### Changed
+- 向自定义命令中传递更多参数、方法，方便在其中进行更复杂的定制
+- 新增"系统提示"功能及相关配置
+- 新增"修改系统提示"命令，可修改系统提示的内容
+
+### Fixed
+- 修复删除对话后未删除关联的音频文件问题
+
 ## [0.2.3] - 2023-11-7
 
 ### Changed

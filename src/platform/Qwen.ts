@@ -131,6 +131,10 @@ export default class Qwen implements BasePlatform {
 	speech(text: string, opts?: Record<string, any>): Promise<ArrayBuffer> {
 		throw new Error('Method not implemented.')
 	}
+	
+	getSystemPrompt(): string {
+		return ''
+	}
 }
 
 const data_header_length = 'data:'.length
