@@ -2,7 +2,7 @@
 
 import { App } from 'vue'
 import { events } from './event'
-import Popover from './Popover.vue'
+//import Popover from './Popover.vue'
 
 interface PopoverHTMLElement extends HTMLElement {
 	$popoverRemoveClickHandlers(): void;
@@ -10,7 +10,7 @@ interface PopoverHTMLElement extends HTMLElement {
 	$popoverRemoveHoverHandlers(): void;
 }
 
-const addClickEventListener = (target: PopoverHTMLElement, name: string) => {
+export const addClickEventListener = (target: PopoverHTMLElement, name: string) => {
 	const event = 'click'
 	const showEventName = `show:${ name }:${ event }`
 	const hideEventName = `hide:${ name }:${ event }`
@@ -34,7 +34,7 @@ const addClickEventListener = (target: PopoverHTMLElement, name: string) => {
 	}
 }
 
-const addHoverEventListener = (target: PopoverHTMLElement, name: string) => {
+export const addHoverEventListener = (target: PopoverHTMLElement, name: string) => {
 	const event = 'hover'
 	const showEventName = `show:${ name }:${ event }`
 	const hideEventName = `hide:${ name }:${ event }`
@@ -50,25 +50,5 @@ const addHoverEventListener = (target: PopoverHTMLElement, name: string) => {
 	target.$popoverRemoveHoverHandlers = () => {
 		target.removeEventListener('mouseenter', onMouseEnter)
 		target.removeEventListener('mouseleave', onMouseLeave)
-	}
-}
-export default {
-	install(Vue: App) {
-		document.addEventListener('resize', () => {
-			events.eventNames.filter(x => x.startsWith('hide:')).forEach(k => events.emit(k))
-		})
-		Vue.component('Popover', Popover)
-		Vue.directive('popover', () => {
-			return {
-				mounted(el: any, binding: any) {
-					addClickEventListener(el, binding.arg || '')
-					addHoverEventListener(el, binding.arg || '')
-				},
-				unmounted(el: any) {
-					el.$popoverRemoveHoverHandlers()
-					el.$popoverRemoveClickHandlers()
-				}
-			}
-		})
 	}
 }

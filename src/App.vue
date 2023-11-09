@@ -11,8 +11,10 @@ import generate_prompt from './prompt_functions'
 import { createMd, formatTime, copy, highlightAll, UUID } from './utils'
 import Platform from './platform'
 import Popover from '@/components/popover/Popover.vue'
+import { addClickEventListener, addHoverEventListener } from '@/components/popover'
 import Integration from './platformIntegration'
 import AudioPlus from '@/components/audio-plus/audio-plus.vue'
+import { events } from '@/components/popover/event'
 
 const default_title = 'Desktop ChatAI Plus'
 let config_path = `config.json`
@@ -29,6 +31,16 @@ const textareaRef = ref<HTMLTextAreaElement>(null)
 const templatePromptRef = ref<HTMLElement>(null)
 const messages = ref<IMessage[]>([])
 const selectedConversationRef = ref<InstanceType<typeof Popover> | null>(null)
+const vPopover = {
+	mounted(el: any, binding: any) {
+		addClickEventListener(el, binding.arg || '')
+		addHoverEventListener(el, binding.arg || '')
+	},
+	unmounted(el: any) {
+		el.$popoverRemoveHoverHandlers()
+		el.$popoverRemoveClickHandlers()
+	}
+}
 
 const state = reactive({
 	isAlwaysOnTop: false,
@@ -116,6 +128,10 @@ async function toggleAlwaysOnTop() {
 	await Integration.invokeMainFunction('setAlwaysOnTop', state.isAlwaysOnTop)
 	localStorage.setItem('isAlwaysOnTop', state.isAlwaysOnTop + '')
 }
+
+document.addEventListener('resize', () => {
+	events.eventNames.filter(x => x.startsWith('hide:')).forEach(k => events.emit(k))
+})
 
 onMounted(async () => {
 	//  获取程序执行路径
@@ -433,7 +449,7 @@ async function onChat() {
 	const max_token = platform_config.round_max_tokens
 	const platform = platformMap[platformStr]
 	let total_tokens = platform.count_tokens(prompt)
-	if (total_tokens > max_token) {
+	if (max_token > 0 && total_tokens > max_token) {
 		await Integration.showErrorBox('错误', '输入文本长度超出允许的最大值')
 		inputFocus()
 		return
@@ -466,7 +482,7 @@ async function onChat() {
 			}
 			// 计算tokens是否超出允许的最大值
 			const tokens = platform.count_tokens(message.content)
-			if (tokens + total_tokens > max_token) break
+			if (max_token > 0 && tokens + total_tokens > max_token) break
 			total_tokens += tokens
 			relations.splice(0, 0, { role: message.role, content: message.content })
 			// 限制最大关联消息数

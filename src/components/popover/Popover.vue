@@ -26,7 +26,6 @@ const state = reactive({
 })
 const showEventName = `show:${ props.name }:${ props.event }`
 const hideEventName = `hide:${ props.name }:${ props.event }`
-
 const className = computed(() => ['vue-popover', props.pointer && state.positionClass])
 const style = computed(() => {
 	const styles: Record<string, any> = {

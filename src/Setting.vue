@@ -172,7 +172,7 @@ function onSave() {
 						<label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
 							最大关联消息数: {{ state.config.max_related_message_num }}
 						</label>
-						<input v-model.number="state.config.max_related_message_num" type="range" min="0" max="50" step="2" class="w-full h-1 mb-6 bg-gray-200 rounded-lg appearance-none cursor-pointer range-sm dark:bg-gray-700"/>
+						<input v-model.number="state.config.max_related_message_num" type="range" min="0" max="100" step="2" class="w-full h-1 mb-6 bg-gray-200 rounded-lg appearance-none cursor-pointer range-sm dark:bg-gray-700"/>
 					</div>
 					<!-- top-k -->
 					<div class="mb-4">
@@ -195,7 +195,7 @@ function onSave() {
 						<label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
 							Round Max Tokens: {{ state.config[state.active].round_max_tokens }} (单次对话允许的最大token数)
 						</label>
-						<input v-model.number="state.config[state.active].round_max_tokens" type="range" min="100" max="6000"
+						<input v-model.number="state.config[state.active].round_max_tokens" type="range" :min="state.active === 'openai' ? '0' : '100'" max="6000"
 							class="w-full h-1 mb-6 bg-gray-200 rounded-lg appearance-none cursor-pointer range-sm dark:bg-gray-700"/>
 					</div>
 					<div class="mb-4">

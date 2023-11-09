@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.5] - 2023-11-10
+
+### Changed
+- 允许OpenAI设置MaxTokens为0，即不限制生成长度
+- 允许最大关联消息数上限至100条
+
+### Fixed
+- 修复Popover无法显示的问题
+
 ## [0.2.4] - 2023-11-8
 
 ### Changed
