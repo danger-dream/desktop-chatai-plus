@@ -1,6 +1,6 @@
 {
 	"name": "desktop-chatai-plus",
-	"version": "0.2.3",
+	"version": "0.2.5",
 	"main": "dist-electron/index.js",
 	"description": "Desktop ChatAI Plus",
 	"private": true,
